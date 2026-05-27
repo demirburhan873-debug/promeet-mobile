@@ -20,7 +20,7 @@ jobs:
     - name: Install System Dependencies
       run: |
         sudo apt update
-        sudo apt install -y git zip unzip openjdk-17-jdk signapk python3-pip autoconf libtool libtool-bin m4 automake pkg-config zlib1g-dev libncurses5-dev libgdbm-dev libnss3-dev libssl-dev libreadline-dev libffi-dev libsqlite3-dev tk-dev libgdbm-compat-dev libc6-dev libbz2-dev
+        sudo apt install -y git zip unzip openjdk-17-jdk signapk python3-pip autoconf libtool libtool-bin m4 automake pkg-config zlib1g-dev libncurses5-dev libgdbm-dev libnss3-dev libssl-dev libreadline-dev libffi-dev libsqlite3-dev tk-dev libgdbm-compat-dev libc6-dev libbz2-dev aidl
 
     - name: Install Buildozer and Cython
       run: |
