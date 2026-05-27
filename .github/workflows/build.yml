@@ -27,21 +27,14 @@ jobs:
         pip3 install --upgrade pip
         pip3 install cython==0.29.33 buildozer
 
-    - name: Fix Buildozer SDK Path (The Real Fix)
+    - name: Fix Buildozer SDK Path & Pre-Accept Licenses
       run: |
-        # Buildozer'ın arayıp da bulamadığı o eski tip klasör yapısını sunucuda önceden hazırlıyoruz
         mkdir -p /home/runner/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin
         mkdir -p /home/runner/.buildozer/android/platform/android-sdk/tools/bin
-        
-        # Resmi Google komut satırı araçlarını indirip Buildozer'ın klasörüne açıyoruz
         wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline.zip
         unzip -q cmdline.zip
         mv cmdline-tools/* /home/runner/.buildozer/android/platform/android-sdk/cmdline-tools/latest/ || true
-        
-        # Buildozer eski yolu aradığında güncel olana gitmesi için sihirli bir köprü (Link) kuruyoruz
         ln -s /home/runner/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager /home/runner/.buildozer/android/platform/android-sdk/tools/bin/sdkmanager || true
-        
-        # Lisansları peşinen sunucuya onaylatıyoruz
         yes | /home/runner/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
     - name: Generate Buildozer Spec
@@ -49,17 +42,21 @@ jobs:
         buildozer init
         sed -i 's/^requirements =.*/requirements = python3,kivy,opencv-python-headless,firebase-admin,aiortc,numpy,attrs/g' buildozer.spec
         sed -i 's/^android.minapi =.*/android.minapi = 24/g' buildozer.spec
+        sed -i 's/^android.api =.*/android.api = 33/g' buildozer.spec
         sed -i 's/^title =.*/title = ProMeet/g' buildozer.spec
         sed -i 's/^package.name =.*/package.name = promeetapp/g' buildozer.spec
+        # Copilot'un önerdiği büyük uygulamalar için multidex desteğini aktif ediyoruz
+        sed -i 's/^#android.enable_proguard =.*/android.enable_proguard = False/g' buildozer.spec
 
-    - name: Build Android APK
+    - name: Clean Build Cache
+      run: |
+        rm -rf /home/runner/.buildozer/android/platform/build-*
+        buildozer android clean || true
+
+    - name: Build Android APK (With Memory & Buffer Protection)
       run: |
         export BUILDOZER_WARN_ON_ROOT=0
-        # Artık her şey yerli yerinde olduğu için temizce derliyoruz
+        # Copilot'un uyardığı Gradle hafıza taşma hatasını engellemek için RAM limitini artırıyoruz
+        export JAVA_TOOL_OPTIONS="-Xmx2048m"
+        export GRADLE_OPTS="-Xmx2048m -XX:MaxPermSize=512m"
         buildozer android debug
-
-    - name: Upload APK Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: ProMeet-APK
-        path: bin/*.apk
