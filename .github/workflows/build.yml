@@ -27,17 +27,22 @@ jobs:
         pip3 install --upgrade pip
         pip3 install cython==0.29.33 buildozer
 
-    - name: Pre-Accept Android Licenses (System Level)
+    - name: Fix Buildozer SDK Path (The Real Fix)
       run: |
-        # Android SDK henüz kurulmamış olsa bile sunucunun tüm Android lisans yollarını peşinen onaylıyoruz
-        mkdir -p ~/.android
-        touch ~/.android/repositories.cfg
-        mkdir -p /home/runner/.buildozer/android/platform/android-sdk/licenses || true
+        # Buildozer'ın arayıp da bulamadığı o eski tip klasör yapısını sunucuda önceden hazırlıyoruz
+        mkdir -p /home/runner/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin
+        mkdir -p /home/runner/.buildozer/android/platform/android-sdk/tools/bin
         
-        # Google'ın mevcut tüm lisans metin anahtarlarını sunucuya doğrudan kilitliyoruz
-        echo -e "\n24711ab3ca0ecae6dcc963a192d9e224b2531201\n84831b9409646a547e0da9e7d355d540c121d844\n504667f4c0de7af1a06de9f4b1727b84351f2910" > /home/runner/.buildozer/android/platform/android-sdk/licenses/android-sdk-license || true
-        echo -e "\n849d667467436bf16a5de464d85f69d9241562e7" > /home/runner/.buildozer/android/platform/android-sdk/licenses/android-googletv-license || true
-        echo -e "\nd56f118745b66e31e01333d1a66a6fbc0e307e79" > /home/runner/.buildozer/android/platform/android-sdk/licenses/android-sdk-preview-license || true
+        # Resmi Google komut satırı araçlarını indirip Buildozer'ın klasörüne açıyoruz
+        wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline.zip
+        unzip -q cmdline.zip
+        mv cmdline-tools/* /home/runner/.buildozer/android/platform/android-sdk/cmdline-tools/latest/ || true
+        
+        # Buildozer eski yolu aradığında güncel olana gitmesi için sihirli bir köprü (Link) kuruyoruz
+        ln -s /home/runner/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager /home/runner/.buildozer/android/platform/android-sdk/tools/bin/sdkmanager || true
+        
+        # Lisansları peşinen sunucuya onaylatıyoruz
+        yes | /home/runner/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
     - name: Generate Buildozer Spec
       run: |
@@ -50,7 +55,7 @@ jobs:
     - name: Build Android APK
       run: |
         export BUILDOZER_WARN_ON_ROOT=0
-        # Lisanslar sistem seviyesinde onaylandığı için artık düz ve temiz bir şekilde derlemeyi başlatıyoruz
+        # Artık her şey yerli yerinde olduğu için temizce derliyoruz
         buildozer android debug
 
     - name: Upload APK Artifact
