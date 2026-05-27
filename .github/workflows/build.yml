@@ -30,32 +30,17 @@ jobs:
     - name: Auto-Configure Buildozer Spec
       run: |
         buildozer init
-        # Gereksinimleri ve API sürümlerini Buildozer'ın en sevdiği kararlı ayarlara çekiyoruz
         sed -i 's/^requirements =.*/requirements = python3,kivy,opencv-python-headless,firebase-admin,aiortc,numpy,attrs/g' buildozer.spec
-        sed -i 's/^android.minapi =.*/android.minapi = 21/g' buildozer.spec
-        sed -i 's/^android.api =.*/android.api = 33/g' buildozer.spec
+        sed -i 's/^android.minapi =.*/android.minapi = 24/g' buildozer.spec
         sed -i 's/^title =.*/title = ProMeet/g' buildozer.spec
         sed -i 's/^package.name =.*/package.name = promeetapp/g' buildozer.spec
         sed -i 's/^#android.accept_licenses =.*/android.accept_licenses = Yes/g' buildozer.spec
 
-    - name: Pre-download Android SDK Tools (Fix Aidl)
-      run: |
-        # Buildozer'ın aidl hatası vermemesi için gerekli SDK bileşenlerini önceden sunucuya indirip lisanslıyoruz
-        mkdir -p ~/.android
-        touch ~/.android/repositories.cfg
-        wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
-        unzip -q cmdline-tools.zip -d cmdline-tools
-        mkdir -p ~/android-cmdline-tools
-        mv cmdline-tools/cmdline-tools ~/android-cmdline-tools/latest
-        export PATH=$PATH:~/android-cmdline-tools/latest/bin
-        yes | sdkmanager --licenses || true
-        sdkmanager "build-tools;33.0.1" "platforms;android-33" "platform-tools" || true
-
-    - name: Build Android APK
+    - name: Build Android APK (With Buffer Protection)
       run: |
         export BUILDOZER_WARN_ON_ROOT=0
-        # Buildozer'ın bizim indirdiğimiz kararlı SDK'yı kullanmasını sağlıyoruz
-        buildozer android debug
+        # 'yes' komutunun hızı araya 'sleep' konularak yavaşlatılır, böylece terminal hattı tıkanmaz (Broken pipe önlenir)
+        (while true; do echo "y"; sleep 2; done) | buildozer android debug
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
