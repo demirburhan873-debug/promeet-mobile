@@ -5,7 +5,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
     - name: Checkout Code
@@ -17,34 +17,35 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
 
-    - name: Install System Dependencies
+    - name: Pre-install Android SDK Tools and Aidl
       run: |
         sudo apt update
         sudo apt install -y git zip unzip openjdk-17-jdk signapk python3-pip autoconf libtool libtool-bin m4 automake pkg-config zlib1g-dev libncurses5-dev libgdbm-dev libnss3-dev libssl-dev libreadline-dev libffi-dev libsqlite3-dev tk-dev libgdbm-compat-dev libc6-dev libbz2-dev aidl
+        # Aidl aracını Buildozer'ın kesinlikle görebileceği küresel yola kilitliyoruz
+        sudo ln -sf /usr/bin/aidl /usr/bin/android-aidl || true
 
     - name: Install Buildozer and Cython
       run: |
         pip3 install --upgrade pip
         pip3 install cython==0.29.33 buildozer
 
-    - name: Generate Buildozer Spec
+    - name: Auto-Configure Buildozer Spec
       run: |
         buildozer init
+        # Gereksinimleri ve SDK yollarını milimetrik olarak güncelliyoruz
         sed -i 's/^requirements =.*/requirements = python3,kivy,opencv-python-headless,firebase-admin,aiortc,numpy,attrs/g' buildozer.spec
         sed -i 's/^android.minapi =.*/android.minapi = 24/g' buildozer.spec
+        sed -i 's/^android.ndk_api =.*/android.ndk_api = 21/g' buildozer.spec
         sed -i 's/^title =.*/title = ProMeet/g' buildozer.spec
         sed -i 's/^package.name =.*/package.name = promeetapp/g' buildozer.spec
+        # Lisansların otomatik kabul edilmesi için spec dosyasına doğrudan emir gömüyoruz
+        sed -i 's/^#android.accept_licenses =.*/android.accept_licenses = Yes/g' buildozer.spec
 
-    - name: Accept Android Licenses
-      run: |
-        mkdir -p ~/.android
-        touch ~/.android/repositories.cfg
-        yes | sdkmanager --sdk_root=/home/runner/.buildozer/android/platform/android-sdk --licenses || true
-
-    - name: Build Android APK with Buildozer
+    - name: Build Android APK
       run: |
         export BUILDOZER_WARN_ON_ROOT=0
-        buildozer android debug
+        # Buildozer'a tüm lisans sorularına peşinen 'yes' demesini emrediyoruz
+        yes | buildozer android debug
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
