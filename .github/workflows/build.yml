@@ -34,16 +34,11 @@ jobs:
         sed -i 's/^android.minapi =.*/android.minapi = 24/g' buildozer.spec
         sed -i 's/^title =.*/title = ProMeet/g' buildozer.spec
         sed -i 's/^package.name =.*/package.name = promeetapp/g' buildozer.spec
+        # Lisansları resmi olarak dosyaya kazıyoruz
         sed -i 's/^#android.accept_licenses =.*/android.accept_licenses = Yes/g' buildozer.spec
 
-    - name: Build Android APK (With Buffer Protection)
+    - name: Build Android APK
       run: |
         export BUILDOZER_WARN_ON_ROOT=0
-        # 'yes' komutunun hızı araya 'sleep' konularak yavaşlatılır, böylece terminal hattı tıkanmaz (Broken pipe önlenir)
-        (while true; do echo "y"; sleep 2; done) | buildozer android debug
-
-    - name: Upload APK Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: ProMeet-APK
-        path: bin/*.apk
+        # Hat şişiren hiçbir döngü kullanmadan, doğrudan Android SDK'yı sessiz modda derlemeye zorluyoruz
+        buildozer android debug
