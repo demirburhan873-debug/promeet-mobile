@@ -9,10 +9,10 @@ jobs:
 
     steps:
     - name: Checkout Code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Setup Java
-      uses: actions/setup-java@v3
+      uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
         java-version: '17'
@@ -34,6 +34,12 @@ jobs:
         sed -i 's/^android.minapi =.*/android.minapi = 24/g' buildozer.spec
         sed -i 's/^title =.*/title = ProMeet/g' buildozer.spec
         sed -i 's/^package.name =.*/package.name = promeetapp/g' buildozer.spec
+
+    - name: Accept Android Licenses
+      run: |
+        mkdir -p ~/.android
+        touch ~/.android/repositories.cfg
+        yes | sdkmanager --sdk_root=/home/runner/.buildozer/android/platform/android-sdk --licenses || true
 
     - name: Build Android APK with Buildozer
       run: |
